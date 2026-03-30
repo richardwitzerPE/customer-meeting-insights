@@ -1,0 +1,29 @@
+name: Action Items → Microsoft To Do
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'meetings/**/action-items.md'
+
+jobs:
+  create-todo-tasks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Find changed action-items.md files
+        id: changed
+        run: |
+          FILES=$(git diff --name-only HEAD~1 HEAD -- 'meetings/**/action-items.md' | tr '\n' ' ')
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+
+      - name: Post tasks to Power Automate
+        if: steps.changed.outputs.files != ''
+        env:
+          PA_WEBHOOK_URL: ${{ secrets.PA_WEBHOOK_URL }}
+        run: node .github/scripts/post-action-items.js ${{ steps.changed.outputs.files }}
